@@ -13,7 +13,7 @@ void SendMsg(char *msg, int len);
 void ErrorHandling(char *msg);
 
 // 서버에 접속한 클라이언트의 소켓 관리를 위한 변수와 배열
-// 이 둘에 접근하는 코드가 하나의 임계영역 구성
+// 서로 다른 쓰레드가 동시에 접근할 가능성->임계영역에 문제 생길 수 있음 ==> 이 둘에 접근하는 코드가 하나의 임계영역 구성
 int clntCnt = 0;               // 서버에 접속한 클라이언트의 소켓 관리를 위한 변수 (현재 연결된 클라이언트 수)
 int clntSocks[MAX_CLNT];       // 서버에 접속한 클라이언트의 소켓 관리를 위한 배열 (클라이언트 소켓 디스크립터 저장)
 
@@ -47,8 +47,8 @@ int main(int argc, char *argv[])            // argc, argv 사용해 프로그램 실행시
         ErrorHandling("WSAStartup() error!");
 
     // 뮤텍스 생성
-    // TRUE- 생성되는 Mutex 오브젝트는 이 함수를 호출한 쓰레드의 소유가 되면서 non-signaled 상태 됨
-    // FALSE- 생성되는 Mutex 오브젝트는 소유자가 존재하지 않으며, signaled 상태로 생성됨 
+    // TRUE- 생성되는 Mutex 오브젝트는 이 함수를 호출한 쓰레드의 소유가 되면서 non-signaled 상태 됨 (점유상태)
+    // FALSE- 생성되는 Mutex 오브젝트는 소유자가 존재하지 않으며, signaled 상태로 생성됨 (비점유상태)
     hMutex = CreateMutex(NULL, FALSE, NULL);
 
     hServSock = socket(PF_INET, SOCK_STREAM, 0);    // IPv4, TCP

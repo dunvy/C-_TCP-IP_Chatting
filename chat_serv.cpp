@@ -17,7 +17,8 @@ void ErrorHandling(char *msg);
 int clntCnt = 0;               // 서버에 접속한 클라이언트의 소켓 관리를 위한 변수 (현재 연결된 클라이언트 수)
 int clntSocks[MAX_CLNT];       // 서버에 접속한 클라이언트의 소켓 관리를 위한 배열 (클라이언트 소켓 디스크립터 저장)
 
-std::map<SOCKET, int> addSocket;          // 해당 소켓, 소켓 디스크립터
+std::map<SOCKET, int> addSocket;             // 해당 소켓, 소켓 디스크립터
+SOCKET clntSocks[MAX_CLNT];                  // 클라이언트가 접속 요청 후, 메시지 큐만큼 대기
 
 // 뮤텍스 생성을 위한 변수 선언(뮤텍스: 쓰레드의 동시접근을 허용하지 않음. 동기화 대상이 하나)
 HANDLE hMutex;

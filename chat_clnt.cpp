@@ -4,6 +4,26 @@
 #include <windows.h>
 #include <process.h>
 
+typedef enum ColorType{
+    BLACK = 0,
+    darkBLUE = 1,
+    DarkGreen = 2, 
+    darkSkyBlue = 3, 
+    DarkRed = 4,
+    DarkPurple = 5,
+    DarkYellow = 6,
+    GRAY = 7,        
+    DarkGray = 8,    
+    BLUE = 9,        
+    GREEN = 10,        
+    SkyBlue = 11,    
+    RED = 12,        
+    PURPLE = 13,        
+    YELLOW = 14,        
+    WHITE = 15 
+}COLOR;
+void textcolor(int colorNum);
+
 #define BUF_SIZE 1025        // 메시지 버퍼 크기
 #define NAME_SIZE 20        // 클라이언트 이름의 최대 크기
 
@@ -49,6 +69,7 @@ int main(int argc, char *argv[])
 
     char nameMsg[NAME_SIZE+BUF_SIZE];
     sprintf(nameMsg, "%s 님이 입장~~~!하셨습니다~~~~~~~!\n", name);
+    fputs(nameMsg, stdout);
     send(hSock, nameMsg, strlen(nameMsg), 0);
 
     // 송신 및 수신을 담당할 쓰레드 생성
@@ -59,15 +80,15 @@ int main(int argc, char *argv[])
     WaitForSingleObject(hSndThread, INFINITE);
     WaitForSingleObject(hRcvThread, INFINITE);
 
-    // 소켓 종료
-    if(closesocket(hSock) == 0)
-    {
-        char nameMsg[NAME_SIZE+BUF_SIZE];
-        sprintf(nameMsg, "%s 님이 접속을 종료하셨습니다.\n", name);
-        send(hSock, nameMsg, strlen(nameMsg), 0);
-    }
+    // // 소켓 종료
+    // if(closesocket(hSock) == 0)
+    // {
+    //     char nameMsg[NAME_SIZE+BUF_SIZE];
+    //     sprintf(nameMsg, "%s 님이 접속을 종료하셨습니다.\n", name);
+    //     send(hSock, nameMsg, strlen(nameMsg), 0);
+    // }
 
-    // closesocket(hSock);
+    closesocket(hSock);
     WSACleanup();
     return 0;
 }
@@ -88,6 +109,7 @@ unsigned WINAPI SendMsg(void *arg)
         {
             // 메시지를 서버로 전송
             sprintf(nameMsg, "%s 님이 접속을 종료하셨습니다.\n", name);
+            fputs(nameMsg, stdout);
             send(hSock, nameMsg, strlen(nameMsg), 0);   // 서버로 메시지의 길이만큼 메시지 전송
             closesocket(hSock);
             exit(0);
@@ -128,4 +150,9 @@ void ErrorHandling(char *msg)
     fputs(msg, stderr);
     fputc('\n', stderr);
     exit(1);
+}
+
+void textcolor(int colorNum)
+{
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), colorNum);
 }

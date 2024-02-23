@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
     hSock = socket(PF_INET, SOCK_STREAM, 0);    // IPv4, TCP
 
     // 서버 주소 설정
-    memset(&servAdr, 0, sizeof(servAdr));
+    memset(&servAdr, 0, sizeof(servAdr));           // 메모리 초기화 (메모리 시작 주소, 메모리에 입력할 값, 메모리에 입력할 바이트 수)
     servAdr.sin_family = AF_INET;                   // IPv4 인터넷 프로토콜
     servAdr.sin_addr.s_addr = inet_addr(argv[1]);   // 주소
     servAdr.sin_port = htons(atoi(argv[2]));        // 포트번호
