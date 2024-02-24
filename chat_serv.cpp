@@ -5,112 +5,119 @@
 #include <process.h>
 #include <map>
 
-#define BUF_SIZE 1025       // í´ë¼ì´ì–¸íŠ¸ë¡œë¶€í„° ì „ì†¡ë°›ì„ ë¬¸ìžì—´ ê¸¸ì´
-#define MAX_CLNT 256        // í´ë¼ì´ì–¸íŠ¸ ì†Œì¼“ ë°°ì—´ì˜ ìµœëŒ€ í¬ê¸°(ì„œë²„ì— ë™ì‹œì— ì—°ê²°í•  ìˆ˜ ìžˆëŠ” ìµœëŒ€ í´ë¼ì´ì–¸íŠ¸ì˜ ìˆ˜)
+#define BUF_SIZE 1025       // Å¬¶óÀÌ¾ðÆ®·ÎºÎÅÍ Àü¼Û¹ÞÀ» ¹®ÀÚ¿­ ±æÀÌ
+#define MAX_CLNT 256        // Å¬¶óÀÌ¾ðÆ® ¼ÒÄÏ ¹è¿­ÀÇ ÃÖ´ë Å©±â(¼­¹ö¿¡ µ¿½Ã¿¡ ¿¬°áÇÒ ¼ö ÀÖ´Â ÃÖ´ë Å¬¶óÀÌ¾ðÆ®ÀÇ ¼ö)
 
 unsigned WINAPI HandleClnt(void* arg);
 void SendMsg(void *arg, char *msg, int len);
 void ErrorHandling(char *msg);
 
-// ì„œë²„ì— ì ‘ì†í•œ í´ë¼ì´ì–¸íŠ¸ì˜ ì†Œì¼“ ê´€ë¦¬ë¥¼ ìœ„í•œ ë³€ìˆ˜ì™€ ë°°ì—´
-// ì´ ë‘˜ì— ì ‘ê·¼í•˜ëŠ” ì½”ë“œê°€ í•˜ë‚˜ì˜ ìž„ê³„ì˜ì—­ êµ¬ì„±
-int clntCnt = 0;               // ì„œë²„ì— ì ‘ì†í•œ í´ë¼ì´ì–¸íŠ¸ì˜ ì†Œì¼“ ê´€ë¦¬ë¥¼ ìœ„í•œ ë³€ìˆ˜ (í˜„ìž¬ ì—°ê²°ëœ í´ë¼ì´ì–¸íŠ¸ ìˆ˜)
-int clntSocks[MAX_CLNT];       // ì„œë²„ì— ì ‘ì†í•œ í´ë¼ì´ì–¸íŠ¸ì˜ ì†Œì¼“ ê´€ë¦¬ë¥¼ ìœ„í•œ ë°°ì—´ (í´ë¼ì´ì–¸íŠ¸ ì†Œì¼“ ë””ìŠ¤í¬ë¦½í„° ì €ìž¥)
+// ¼­¹ö¿¡ Á¢¼ÓÇÑ Å¬¶óÀÌ¾ðÆ®ÀÇ ¼ÒÄÏ °ü¸®¸¦ À§ÇÑ º¯¼ö¿Í ¹è¿­
+// ÀÌ µÑ¿¡ Á¢±ÙÇÏ´Â ÄÚµå°¡ ÇÏ³ªÀÇ ÀÓ°è¿µ¿ª ±¸¼º
+int clntCnt = 0;               // ¼­¹ö¿¡ Á¢¼ÓÇÑ Å¬¶óÀÌ¾ðÆ®ÀÇ ¼ÒÄÏ °ü¸®¸¦ À§ÇÑ º¯¼ö (ÇöÀç ¿¬°áµÈ Å¬¶óÀÌ¾ðÆ® ¼ö)
+int clntSocks[MAX_CLNT];       // ¼­¹ö¿¡ Á¢¼ÓÇÑ Å¬¶óÀÌ¾ðÆ®ÀÇ ¼ÒÄÏ °ü¸®¸¦ À§ÇÑ ¹è¿­ (Å¬¶óÀÌ¾ðÆ® ¼ÒÄÏ µð½ºÅ©¸³ÅÍ ÀúÀå)
 
-std::map<SOCKET, int> addSocket;             // í•´ë‹¹ ì†Œì¼“, ì†Œì¼“ ë””ìŠ¤í¬ë¦½í„°
-SOCKET clntSocks[MAX_CLNT];                  // í´ë¼ì´ì–¸íŠ¸ê°€ ì ‘ì† ìš”ì²­ í›„, ë©”ì‹œì§€ íë§Œí¼ ëŒ€ê¸°
+// std::map<SOCKET, int> addSocket;             // ÇØ´ç ¼ÒÄÏ, ¼ÒÄÏ µð½ºÅ©¸³ÅÍ
+// SOCKET clntSocks[MAX_CLNT];                  // Å¬¶óÀÌ¾ðÆ®°¡ Á¢¼Ó ¿äÃ» ÈÄ, ¸Þ½ÃÁö Å¥¸¸Å­ ´ë±â
 
-// ë®¤í…ìŠ¤ ìƒì„±ì„ ìœ„í•œ ë³€ìˆ˜ ì„ ì–¸(ë®¤í…ìŠ¤: ì“°ë ˆë“œì˜ ë™ì‹œì ‘ê·¼ì„ í—ˆìš©í•˜ì§€ ì•ŠìŒ. ë™ê¸°í™” ëŒ€ìƒì´ í•˜ë‚˜)
+// ¹ÂÅØ½º »ý¼ºÀ» À§ÇÑ º¯¼ö ¼±¾ð(¹ÂÅØ½º: ¾²·¹µåÀÇ µ¿½ÃÁ¢±ÙÀ» Çã¿ëÇÏÁö ¾ÊÀ½. µ¿±âÈ­ ´ë»óÀÌ ÇÏ³ª)
 HANDLE hMutex;
 
-int main(int argc, char *argv[])            // argc, argv ì‚¬ìš©í•´ í”„ë¡œê·¸ëž¨ ì‹¤í–‰ì‹œ í¬íŠ¸ë²ˆí˜¸ ìž…ë ¥ë°›ìŒ
+int main(int argc, char *argv[])            // argc, argv »ç¿ëÇØ ÇÁ·Î±×·¥ ½ÇÇà½Ã Æ÷Æ®¹øÈ£ ÀÔ·Â¹ÞÀ½
 {
-    WSADATA wasData;                // ì†Œì¼“ ì´ˆê¸°í™” ìœˆì† êµ¬ì¡°ì²´ ë©¤ë²„ë³€ìˆ˜ ì„ ì–¸
+    WSADATA wasData;                // ¼ÒÄÏ ÃÊ±âÈ­ À©¼Ó ±¸Á¶Ã¼ ¸â¹öº¯¼ö ¼±¾ð
 
-    SOCKET hServSock, hClntSock;    // ì„œë²„ ì†Œì¼“, í´ë¼ì´ì–¸íŠ¸ ì†Œì¼“
-    SOCKADDR_IN servAdr, clntAdr;   // ì„œë²„ ì†Œì¼“ ì£¼ì†Œ, í´ë¼ì´ì–¸íŠ¸ ì†Œì¼“ ì£¼ì†Œ
-    int clntAdrSz;                  // í´ë¼ì´ì–¸íŠ¸ ì†Œì¼“ ì£¼ì†Œ ì •ë³´ì˜ í¬ê¸°ë¥¼ ë‚˜íƒ€ë‚´ëŠ” ë³€ìˆ˜
+    SOCKET hServSock, hClntSock;    // ¼­¹ö ¼ÒÄÏ, Å¬¶óÀÌ¾ðÆ® ¼ÒÄÏ
+    SOCKADDR_IN servAdr, clntAdr;   // ¼­¹ö ¼ÒÄÏ ÁÖ¼Ò, Å¬¶óÀÌ¾ðÆ® ¼ÒÄÏ ÁÖ¼Ò
+    int clntAdrSz;                  // Å¬¶óÀÌ¾ðÆ® ¼ÒÄÏ ÁÖ¼Ò Á¤º¸ÀÇ Å©±â¸¦ ³ªÅ¸³»´Â º¯¼ö
 
-    HANDLE hThread;                 // ì“°ë ˆë“œ ìƒì„±ì— ì‚¬ìš©ë  ì“°ë ˆë“œ ID ë³€ìˆ˜
+    HANDLE hThread;                 // ¾²·¹µå »ý¼º¿¡ »ç¿ëµÉ ¾²·¹µå ID º¯¼ö
 
     if(argc != 2)
     {
-        std::cout << "Usage: " << argv[0] << "<port>" << std::endl;     // arg[0]: í¬íŠ¸ë²ˆí˜¸
-        exit(1);                                                        // ë¹„ì •ìƒì ì¸ ì¢…ë£Œ
+        std::cout << "Usage: " << argv[0] << "<port>" << std::endl;     // arg[0]: Æ÷Æ®¹øÈ£
+        exit(1);                                                        // ºñÁ¤»óÀûÀÎ Á¾·á
     }
 
-    // ìœˆì† ì´ˆê¸°í™”: ì†Œì¼“ ë¼ì´ë¸ŒëŸ¬ë¦¬ ì´ˆê¸°í™”
-    // winsock ë²„ì „ 2.2
+    // À©¼Ó ÃÊ±âÈ­: ¼ÒÄÏ ¶óÀÌºê·¯¸® ÃÊ±âÈ­
+    // winsock ¹öÀü 2.2
     if(WSAStartup(MAKEWORD(2, 2), &wasData) != 0)
         ErrorHandling("WSAStartup() error!");
 
-    // ë®¤í…ìŠ¤ ìƒì„±
-    // TRUE- ìƒì„±ë˜ëŠ” Mutex ì˜¤ë¸Œì íŠ¸ëŠ” ì´ í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•œ ì“°ë ˆë“œì˜ ì†Œìœ ê°€ ë˜ë©´ì„œ non-signaled ìƒíƒœ ë¨
-    // FALSE- ìƒì„±ë˜ëŠ” Mutex ì˜¤ë¸Œì íŠ¸ëŠ” ì†Œìœ ìžê°€ ì¡´ìž¬í•˜ì§€ ì•Šìœ¼ë©°, signaled ìƒíƒœë¡œ ìƒì„±ë¨ 
+    // ¹ÂÅØ½º »ý¼º
+    // TRUE- »ý¼ºµÇ´Â Mutex ¿ÀºêÁ§Æ®´Â ÀÌ ÇÔ¼ö¸¦ È£ÃâÇÑ ¾²·¹µåÀÇ ¼ÒÀ¯°¡ µÇ¸é¼­ non-signaled »óÅÂ µÊ
+    // FALSE- »ý¼ºµÇ´Â Mutex ¿ÀºêÁ§Æ®´Â ¼ÒÀ¯ÀÚ°¡ Á¸ÀçÇÏÁö ¾ÊÀ¸¸ç, signaled »óÅÂ·Î »ý¼ºµÊ 
     hMutex = CreateMutex(NULL, FALSE, NULL);
 
     hServSock = socket(PF_INET, SOCK_STREAM, 0);    // IPv4, TCP
 
-    // ì£¼ì†Œ ì„¤ì •
-    memset(&servAdr, 0, sizeof(servAdr));           // ì´ˆê¸°í™”
+    // ÁÖ¼Ò ¼³Á¤
+    memset(&servAdr, 0, sizeof(servAdr));           // ÃÊ±âÈ­
     servAdr.sin_family = AF_INET;                   // IPv4
-    servAdr.sin_addr.s_addr = htonl(INADDR_ANY);    // ì•„ì´í”¼ ì£¼ì†Œ
-    servAdr.sin_port = htons(atoi(argv[1]));        // í¬íŠ¸ë²ˆí˜¸
+    servAdr.sin_addr.s_addr = htonl(INADDR_ANY);    // ¾ÆÀÌÇÇ ÁÖ¼Ò
+    servAdr.sin_port = htons(atoi(argv[1]));        // Æ÷Æ®¹øÈ£
 
-    // ì£¼ì†Œ í• ë‹¹ ë° ì—°ê²°ìš”ì²­ ëŒ€ê¸°
+    // ÁÖ¼Ò ÇÒ´ç ¹× ¿¬°á¿äÃ» ´ë±â
     if(bind(hServSock, (SOCKADDR*)&servAdr, sizeof(servAdr)) == SOCKET_ERROR)
         ErrorHandling("bind() error");
     if(listen(hServSock, 5) == SOCKET_ERROR)
         ErrorHandling("listen() error");
 
-    // í´ë¼ì´ì–¸íŠ¸ ì—°ê²° ìˆ˜ë½ ë° ì„œë¹„ìŠ¤ ì œê³µ
+    // Å¬¶óÀÌ¾ðÆ® ¿¬°á ¼ö¶ô ¹× ¼­ºñ½º Á¦°ø
     while(1)
     {
-        // í´ë¼ì´ì–¸íŠ¸ ì—°ê²° ìˆ˜ë½
-        clntAdrSz = sizeof(clntAdr);        // í´ë¼ì´ì–¸íŠ¸ ì£¼ì†Œ í¬ê¸° ëŒ€ìž…
+        // Å¬¶óÀÌ¾ðÆ® ¿¬°á ¼ö¶ô
+        clntAdrSz = sizeof(clntAdr);        // Å¬¶óÀÌ¾ðÆ® ÁÖ¼Ò Å©±â ´ëÀÔ
         hClntSock = accept(hServSock, (SOCKADDR*)&clntAdr, &clntAdrSz);
 
-        WaitForSingleObject(hMutex, INFINITE);  // í•˜ë‚˜ì˜ ì»¤ë„ ì˜¤ë¸Œì íŠ¸ì— ëŒ€í•´ signaled ìƒíƒœì¸ì§€ í™•ì¸
-        // ìž„ê³„ì˜ì—­ ì‹œìž‘
+        WaitForSingleObject(hMutex, INFINITE);  // ÇÏ³ªÀÇ Ä¿³Î ¿ÀºêÁ§Æ®¿¡ ´ëÇØ signaled »óÅÂÀÎÁö È®ÀÎ
+        // ÀÓ°è¿µ¿ª ½ÃÀÛ
 
-        // ìƒˆë¡œìš´ ì—°ê²°ì´ í˜•ì„±ë  ë•Œë§ˆë‹¤ ë³€ìˆ˜ clnt_cntì™€ ë°°ì—´ clnt_socksì— í•´ë‹¹ ì •ë³´ ë“±ë¡
+        // »õ·Î¿î ¿¬°áÀÌ Çü¼ºµÉ ¶§¸¶´Ù º¯¼ö clnt_cnt¿Í ¹è¿­ clnt_socks¿¡ ÇØ´ç Á¤º¸ µî·Ï
         clntSocks[clntCnt++] = hClntSock;
-        addSocket.insert({hClntSock, clntCnt});     // mapì— ë””ìŠ¤í¬ë¦½í„°ì™€ ì†Œì¼“ ì €ìž¥?
+        // addSocket.insert({hClntSock, clntCnt});     // map¿¡ µð½ºÅ©¸³ÅÍ¿Í ¼ÒÄÏ ÀúÀå?
 
-        // ìž„ê³„ì˜ì—­ ì¢…ë£Œ
-        ReleaseMutex(hMutex);                   // Mutex í•´ì œ
+        // ÀÓ°è¿µ¿ª Á¾·á
+        ReleaseMutex(hMutex);                   // Mutex ÇØÁ¦
 
-        // ì“°ë ˆë“œ ìƒì„±
-        // ì¶”ê°€ëœ í´ë¼ì´ì–¸íŠ¸ì—ê²Œ ì„œë¹„ìŠ¤ë¥¼ ì œê³µí•˜ê¸° ìœ„í•œ ì“°ë ˆë“œ ìƒì„±
-        // ì´ ì“°ë ˆë“œì— ì˜í•´ HandleClnt í•¨ìˆ˜ ì‹¤í–‰
+        // ¾²·¹µå »ý¼º
+        // Ãß°¡µÈ Å¬¶óÀÌ¾ðÆ®¿¡°Ô ¼­ºñ½º¸¦ Á¦°øÇÏ±â À§ÇÑ ¾²·¹µå »ý¼º
+        // ÀÌ ¾²·¹µå¿¡ ÀÇÇØ HandleClnt ÇÔ¼ö ½ÇÇà
         hThread = (HANDLE)_beginthreadex(NULL, 0, HandleClnt, (void*)&hClntSock, 0, NULL);
         std::cout << "Connected client IP: " << inet_ntoa(clntAdr.sin_addr) << std::endl;
     }
 
-    // ìœˆë„ìš°ì˜ ì“°ë ˆë“œëŠ” ì“°ë ˆë“œ í•¨ìˆ˜ë¥¼ ë°˜í™˜í•˜ë©´ ìžë™ìœ¼ë¡œ ì†Œë©¸ë¨
+    // À©µµ¿ìÀÇ ¾²·¹µå´Â ¾²·¹µå ÇÔ¼ö¸¦ ¹ÝÈ¯ÇÏ¸é ÀÚµ¿À¸·Î ¼Ò¸êµÊ
 
-    // ì†Œì¼“ ë‹«ì•„ì£¼ê¸°
+    // ¼ÒÄÏ ´Ý¾ÆÁÖ±â
     closesocket(hServSock);
 
-    // ìœˆì† í•´ì œ: ì†Œì¼“ ë¼ì´ë¸ŒëŸ¬ë¦¬ ì¢…ë£Œ
+    // À©¼Ó ÇØÁ¦: ¼ÒÄÏ ¶óÀÌºê·¯¸® Á¾·á
     WSACleanup();
     return 0;
 }
 
 unsigned WINAPI HandleClnt(void *arg)       // arg: (void*)&clnt_sock
 {
-    SOCKET hClntSock = *((SOCKET*)arg);     // í´ë¼ì´ì–¸íŠ¸ì™€ì˜ í†µì‹ ì— ì‚¬ìš©ë˜ëŠ” ì†Œì¼“ ë””ìŠ¤í¬ë¦½í„°
-    int strLen = 0, i;                      // í´ë¼ì´ì–¸íŠ¸ë¡œë¶€í„° ìˆ˜ì‹ í•œ ë©”ì‹œì§€ ê¸¸ì´ ì €ìž¥
-    char msg[BUF_SIZE];                     // í´ë¼ì´ì–¸íŠ¸ë¡œë¶€í„° ìˆ˜ì‹ í•œ ë©”ì‹œì§€ë¥¼ ì €ìž¥í•  ë¬¸ìžì—´ ë°°ì—´
+    SOCKET hClntSock = *((SOCKET*)arg);     // Å¬¶óÀÌ¾ðÆ®¿ÍÀÇ Åë½Å¿¡ »ç¿ëµÇ´Â ¼ÒÄÏ µð½ºÅ©¸³ÅÍ
+    int strLen = 0, i;                      // Å¬¶óÀÌ¾ðÆ®·ÎºÎÅÍ ¼ö½ÅÇÑ ¸Þ½ÃÁö ±æÀÌ ÀúÀå
+    char msg[BUF_SIZE];                     // Å¬¶óÀÌ¾ðÆ®·ÎºÎÅÍ ¼ö½ÅÇÑ ¸Þ½ÃÁö¸¦ ÀúÀåÇÒ ¹®ÀÚ¿­ ¹è¿­
 
-    // ë°ì´í„° ìˆ˜ì‹  ë° ì²˜ë¦¬
-    while((strLen = recv(hClntSock, msg, sizeof(msg), 0)) != 0) // í´ë¼ì´ì–¸íŠ¸ë¡œë¶€í„° ë°ì´í„° ì½ì–´ë“¤ìž„(ë°ì´í„° recv)
-        SendMsg((void*)&hClntSock, msg, strLen);                                   // ì½ì€ ë°ì´í„° ì²˜ë¦¬ í•¨ìˆ˜
+    // µ¥ÀÌÅÍ ¼ö½Å ¹× Ã³¸®
+    while((strLen = recv(hClntSock, msg, sizeof(msg), 0)) != 0) // Å¬¶óÀÌ¾ðÆ®·ÎºÎÅÍ µ¥ÀÌÅÍ ÀÐ¾îµéÀÓ(µ¥ÀÌÅÍ recv)
+    {
+        SendMsg((void*)&hClntSock, msg, strLen);                                   // ÀÐÀº µ¥ÀÌÅÍ Ã³¸® ÇÔ¼ö
+        // std::cout << "msg: " << msg << std::endl << "msg[6,7]: " << msg[6] << std::endl;
+        std::cout << "msg: " << msg;
+        memset(msg, 0, sizeof(msg));
+        // ´Ð³×ÀÓÀ» ÀúÀå -> ´Ð³×ÀÓ »çÀÌÁî ¼¼°í-> ±× ´ÙÀ½ Ã¹¹øÂ° ¿ä¼Ò »Ì¾Æ¼­ ¹»·Î ½ÃÀÛÇÏ´ÂÁö º¸°í? ¸Þ½ÃÁö ±¸ºÐÇØ¼­ Àü´Þ
+        // memset(msg, 0, sizeof((char) * 1025));
+    }
     
-    // í´ë¼ì´ì–¸íŠ¸ ì—°ê²° ì‚­ì œ ë° ìžì› ê´€ë¦¬
-    // í´ë¼ì´ì–¸íŠ¸ ì—°ê²°ì´ ì¢…ë£Œë˜ì—ˆì„ ë•Œ, í´ë¼ì´ì–¸íŠ¸ ì†Œì¼“ì„ ê´€ë¦¬í•˜ëŠ” ë°°ì—´ì—ì„œ í•´ë‹¹ í´ë¼ì´ì–¸íŠ¸ ì†Œì¼“ ì œê±°
+    // Å¬¶óÀÌ¾ðÆ® ¿¬°á »èÁ¦ ¹× ÀÚ¿ø °ü¸®
+    // Å¬¶óÀÌ¾ðÆ® ¿¬°áÀÌ Á¾·áµÇ¾úÀ» ¶§, Å¬¶óÀÌ¾ðÆ® ¼ÒÄÏÀ» °ü¸®ÇÏ´Â ¹è¿­¿¡¼­ ÇØ´ç Å¬¶óÀÌ¾ðÆ® ¼ÒÄÏ Á¦°Å
     WaitForSingleObject(hMutex, INFINITE);
-    // ìž„ê³„ì˜ì—­ ì‹œìž‘
+    // ÀÓ°è¿µ¿ª ½ÃÀÛ
     
     for(i = 0; i < clntCnt; i++)
     {
@@ -123,17 +130,17 @@ unsigned WINAPI HandleClnt(void *arg)       // arg: (void*)&clnt_sock
     }
     clntCnt--;
 
-    // ìž„ê³„ì˜ì—­ ì¢…ë£Œ
+    // ÀÓ°è¿µ¿ª Á¾·á
     ReleaseMutex(hMutex);
 
     closesocket(hClntSock);
     return 0;
 }
 
-// ì´ í•¨ìˆ˜ì— ì—°ê²°ëœ ëª¨ë“  í´ë¼ì´ì–¸íŠ¸ì—ê²Œ ë©”ì‹œì§€ ë³´ë‚´ê¸°
+// ÀÌ ÇÔ¼ö¿¡ ¿¬°áµÈ ¸ðµç Å¬¶óÀÌ¾ðÆ®¿¡°Ô ¸Þ½ÃÁö º¸³»±â
 void SendMsg(void *arg, char *msg, int len)
 {
-    SOCKET hClntSock = *((SOCKET*)arg);     // í´ë¼ì´ì–¸íŠ¸ì™€ì˜ í†µì‹ ì— ì‚¬ìš©ë˜ëŠ” ì†Œì¼“ ë””ìŠ¤í¬ë¦½í„°
+    SOCKET hClntSock = *((SOCKET*)arg);     // Å¬¶óÀÌ¾ðÆ®¿ÍÀÇ Åë½Å¿¡ »ç¿ëµÇ´Â ¼ÒÄÏ µð½ºÅ©¸³ÅÍ
     // char msgMessage[BUF_SIZE];
     int i;
 
@@ -141,7 +148,7 @@ void SendMsg(void *arg, char *msg, int len)
 
     // if(!strcmp(msg,"q\n")||!strcmp(msg,"Q\n"))
     // {
-    //     char message[] = "ë‹˜ì´ ì ‘ì†ì„ ì¢…ë£Œí•˜ì…¨ìŠµë‹ˆë‹¤.\n";
+    //     char message[] = "´ÔÀÌ Á¢¼ÓÀ» Á¾·áÇÏ¼Ì½À´Ï´Ù.\n";
     //     sprintf(msgMessage, "%s %s", msg, message);
         
     //     fputs(msgMessage, stdout);
@@ -152,13 +159,13 @@ void SendMsg(void *arg, char *msg, int len)
     // else
     // {
 
-    // clntCnt ë°°ì—´ì— ìžˆëŠ” ëª¨ë“  ì†Œì¼“ì—ê²Œ ë©”ì‹œì§€ ì „ë‹¬
+    // clntCnt ¹è¿­¿¡ ÀÖ´Â ¸ðµç ¼ÒÄÏ¿¡°Ô ¸Þ½ÃÁö Àü´Þ
     for(i = 0; i < clntCnt; i++)
     {
         // if(addSocket.find(hClntSock) != addSocket.end())
         if (hClntSock != clntSocks[i])
         {
-            send(clntSocks[i], msg, len, 0);        // ë©”ì‹œì§€ì˜ ê¸¸ì´ë¥¼ êµ¬í•˜ì—¬ ì „ì†¡
+            send(clntSocks[i], msg, len, 0);        // ¸Þ½ÃÁöÀÇ ±æÀÌ¸¦ ±¸ÇÏ¿© Àü¼Û
         }
     }
     // }

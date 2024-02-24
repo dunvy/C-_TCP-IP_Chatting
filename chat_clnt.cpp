@@ -67,10 +67,12 @@ int main(int argc, char *argv[])
         ErrorHandling("connect() error!");
     }
 
-    char nameMsg[NAME_SIZE+BUF_SIZE];
-    sprintf(nameMsg, "%s 님이 입장~~~!하셨습니다~~~~~~~!\n", name);
-    fputs(nameMsg, stdout);
-    send(hSock, nameMsg, strlen(nameMsg), 0);
+    char Msg[NAME_SIZE+BUF_SIZE];
+    sprintf(Msg, "%s 님이 입장~~~!하셨습니다~~~~~~~!\n", name);
+    fputs(Msg, stdout);
+    send(hSock, Msg, strlen(Msg), 0);
+    // memset(Msg, 0, sizeof(Msg));
+
 
     // 송신 및 수신을 담당할 쓰레드 생성
     hSndThread = (HANDLE)_beginthreadex(NULL,0,SendMsg, (void*)&hSock, 0, NULL);
@@ -97,6 +99,7 @@ unsigned WINAPI SendMsg(void *arg)
 {
     SOCKET hSock = *((SOCKET*)arg);
     char nameMsg[NAME_SIZE+BUF_SIZE];
+    textcolor(SkyBlue);
 
     while(1)
     {
@@ -111,6 +114,8 @@ unsigned WINAPI SendMsg(void *arg)
             sprintf(nameMsg, "%s 님이 접속을 종료하셨습니다.\n", name);
             fputs(nameMsg, stdout);
             send(hSock, nameMsg, strlen(nameMsg), 0);   // 서버로 메시지의 길이만큼 메시지 전송
+            memset(nameMsg, 0, sizeof(nameMsg));
+
             closesocket(hSock);
             exit(0);
         }
@@ -119,6 +124,7 @@ unsigned WINAPI SendMsg(void *arg)
             // 메시지를 서버로 전송
             sprintf(nameMsg, "%s %s", name, msg);
             send(hSock, nameMsg, strlen(nameMsg), 0);   // 서버로 메시지의 길이만큼 메시지 전송
+            memset(nameMsg, 0, sizeof(nameMsg));            
         }
     }
     return 0;
@@ -129,6 +135,8 @@ unsigned WINAPI RecvMsg(void *arg)
     int hSock = *((SOCKET*)arg);
     char nameMsg[NAME_SIZE+BUF_SIZE];
     int strLen;
+    textcolor(GREEN);
+
     while(1)
     {
         // 서버로부터 메시지 수신
