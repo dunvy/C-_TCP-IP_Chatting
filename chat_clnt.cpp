@@ -4,25 +4,25 @@
 #include <windows.h>
 #include <process.h>
 
-typedef enum ColorType{
-    BLACK = 0,
-    darkBLUE = 1,
-    DarkGreen = 2, 
-    darkSkyBlue = 3, 
-    DarkRed = 4,
-    DarkPurple = 5,
-    DarkYellow = 6,
-    GRAY = 7,        
-    DarkGray = 8,    
-    BLUE = 9,        
-    GREEN = 10,        
-    SkyBlue = 11,    
-    RED = 12,        
-    PURPLE = 13,        
-    YELLOW = 14,        
-    WHITE = 15 
-}COLOR;
-void textcolor(int colorNum);
+// typedef enum ColorType{
+//     BLACK = 0,
+//     darkBLUE = 1,
+//     DarkGreen = 2, 
+//     darkSkyBlue = 3, 
+//     DarkRed = 4,
+//     DarkPurple = 5,
+//     DarkYellow = 6,
+//     GRAY = 7,        
+//     DarkGray = 8,    
+//     BLUE = 9,        
+//     GREEN = 10,        
+//     SkyBlue = 11,    
+//     RED = 12,        
+//     PURPLE = 13,        
+//     YELLOW = 14,        
+//     WHITE = 15 
+// }COLOR;
+// void textcolor(int colorNum);
 
 #define BUF_SIZE 1025        // 메시지 버퍼 크기
 #define NAME_SIZE 20        // 클라이언트 이름의 최대 크기
@@ -40,9 +40,9 @@ int main(int argc, char *argv[])
     SOCKET hSock;
     SOCKADDR_IN servAdr;
     HANDLE hSndThread, hRcvThread;
-    if(argc!=4)
+    if(argc!=3)
     {
-        std::cout<<"Usage: " << argv[0] << "<IP> <port> <name>" <<std::endl;
+        std::cout<<"Usage: " << argv[0] << "<IP> <port>" <<std::endl;
         exit(1);
     }
     if(WSAStartup(MAKEWORD(2,2), &wsaData)!=0)
@@ -50,8 +50,9 @@ int main(int argc, char *argv[])
         ErrorHandling("WSAStartup() error!");
     }
 
-    // 사용자 이름 설정
-    sprintf(name, "[%s]", argv[3]);
+    // // 사용자 이름 설정
+    // sprintf(name, "[%s]", argv[2]);
+
     // 소켓 생성 (아직 서버에 대한 정보x)
     hSock = socket(PF_INET, SOCK_STREAM, 0);    // IPv4, TCP
 
@@ -67,12 +68,20 @@ int main(int argc, char *argv[])
         ErrorHandling("connect() error!");
     }
 
+    std::cout<< "============================================" << std::endl;
+    std::cout << "           닉네임을 입력해주세요" << std::endl;
+    std::cout<< "============================================" << std::endl;
+    std::cin >> name;
+    // send(hSock, name, strlen(name), 0);
+    // memset(name, 0, sizeof(name));
+
+    // 입장 메시지 보내기
     char Msg[NAME_SIZE+BUF_SIZE];
-    sprintf(Msg, "%s 님이 입장~~~!하셨습니다~~~~~~~!\n", name);
+    sprintf(Msg, "%s 님이 입장~~~!하셨습니다~~!\n", name);
     fputs(Msg, stdout);
     send(hSock, Msg, strlen(Msg), 0);
-    // memset(Msg, 0, sizeof(Msg));
-
+    memset(Msg, 0, sizeof(Msg));
+    memset(name, 0, sizeof(name));
 
     // 송신 및 수신을 담당할 쓰레드 생성
     hSndThread = (HANDLE)_beginthreadex(NULL,0,SendMsg, (void*)&hSock, 0, NULL);
@@ -99,7 +108,6 @@ unsigned WINAPI SendMsg(void *arg)
 {
     SOCKET hSock = *((SOCKET*)arg);
     char nameMsg[NAME_SIZE+BUF_SIZE];
-    textcolor(SkyBlue);
 
     while(1)
     {
@@ -135,7 +143,6 @@ unsigned WINAPI RecvMsg(void *arg)
     int hSock = *((SOCKET*)arg);
     char nameMsg[NAME_SIZE+BUF_SIZE];
     int strLen;
-    textcolor(GREEN);
 
     while(1)
     {
@@ -160,7 +167,7 @@ void ErrorHandling(char *msg)
     exit(1);
 }
 
-void textcolor(int colorNum)
-{
-    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), colorNum);
-}
+// void textcolor(int colorNum)
+// {
+//     SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), colorNum);
+// }

@@ -80,6 +80,12 @@ int main(int argc, char *argv[])            // argc, argv 사용해 프로그램 실행시
         // 임계영역 종료
         ReleaseMutex(hMutex);                   // Mutex 해제
 
+
+        int strLen = 0, i;                      // 클라이언트로부터 수신한 메시지 길이 저장
+        char msg[BUF_SIZE];                     // 클라이언트로부터 수신한 메시지를 저장할 문자열 배열
+        recv(hClntSock, msg, sizeof(msg), 0);
+        std::cout << "msg: " << msg << std::endl;
+
         // 쓰레드 생성
         // 추가된 클라이언트에게 서비스를 제공하기 위한 쓰레드 생성
         // 이 쓰레드에 의해 HandleClnt 함수 실행
@@ -107,11 +113,9 @@ unsigned WINAPI HandleClnt(void *arg)       // arg: (void*)&clnt_sock
     while((strLen = recv(hClntSock, msg, sizeof(msg), 0)) != 0) // 클라이언트로부터 데이터 읽어들임(데이터 recv)
     {
         SendMsg((void*)&hClntSock, msg, strLen);                                   // 읽은 데이터 처리 함수
-        // std::cout << "msg: " << msg << std::endl << "msg[6,7]: " << msg[6] << std::endl;
-        std::cout << "msg: " << msg;
-        memset(msg, 0, sizeof(msg));
-        // 닉네임을 저장 -> 닉네임 사이즈 세고-> 그 다음 첫번째 요소 뽑아서 뭘로 시작하는지 보고? 메시지 구분해서 전달
-        // memset(msg, 0, sizeof((char) * 1025));
+        std::cout << "msg: " << msg << std::endl;
+        msg[strLen] = 0;
+        // // 닉네임을 저장 -> 닉네임 사이즈 세고-> 그 다음 첫번째 요소 뽑아서 뭘로 시작하는지 보고? 메시지 구분해서 전달
     }
     
     // 클라이언트 연결 삭제 및 자원 관리
@@ -166,11 +170,13 @@ void SendMsg(void *arg, char *msg, int len)
         if (hClntSock != clntSocks[i])
         {
             send(clntSocks[i], msg, len, 0);        // 메시지의 길이를 구하여 전송
+            memset(msg, 0, sizeof(msg));
         }
     }
     // }
 
     ReleaseMutex(hMutex);
+    std::cout << "msg: " << msg << std::endl;
 }
 
 void ErrorHandling(char *msg)
