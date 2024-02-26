@@ -4,26 +4,6 @@
 #include <windows.h>
 #include <process.h>
 
-// typedef enum ColorType{
-//     BLACK = 0,
-//     darkBLUE = 1,
-//     DarkGreen = 2, 
-//     darkSkyBlue = 3, 
-//     DarkRed = 4,
-//     DarkPurple = 5,
-//     DarkYellow = 6,
-//     GRAY = 7,        
-//     DarkGray = 8,    
-//     BLUE = 9,        
-//     GREEN = 10,        
-//     SkyBlue = 11,    
-//     RED = 12,        
-//     PURPLE = 13,        
-//     YELLOW = 14,        
-//     WHITE = 15 
-// }COLOR;
-// void textcolor(int colorNum);
-
 #define BUF_SIZE 1025        // 메시지 버퍼 크기
 #define NAME_SIZE 20        // 클라이언트 이름의 최대 크기
 
@@ -33,6 +13,7 @@ void ErrorHandling(char *msg);
 
 char name[NAME_SIZE]="[DEFAULT]";   // 대화명 저장 정적 배열
 char msg[BUF_SIZE];                 // 보낼 메시지를 저장할 정적 배열
+char chat[BUF_SIZE];
 
 int main(int argc, char *argv[])
 {
@@ -50,9 +31,6 @@ int main(int argc, char *argv[])
         ErrorHandling("WSAStartup() error!");
     }
 
-    // // 사용자 이름 설정
-    // sprintf(name, "[%s]", argv[2]);
-
     // 소켓 생성 (아직 서버에 대한 정보x)
     hSock = socket(PF_INET, SOCK_STREAM, 0);    // IPv4, TCP
 
@@ -68,25 +46,70 @@ int main(int argc, char *argv[])
         ErrorHandling("connect() error!");
     }
 
+
+    // 닉네임 입력
     std::cout<< "============================================" << std::endl;
     std::cout << "           닉네임을 입력해주세요" << std::endl;
     std::cout<< "============================================" << std::endl;
     std::cin >> name;
-    // send(hSock, name, strlen(name), 0);
-    // memset(name, 0, sizeof(name));
+    name[strlen(name)] = 0;
+    send(hSock, name, strlen(name), 0);
 
-    // 입장 메시지 보내기
-    char Msg[NAME_SIZE+BUF_SIZE];
-    sprintf(Msg, "%s 님이 입장~~~!하셨습니다~~!\n", name);
-    fputs(Msg, stdout);
-    send(hSock, Msg, strlen(Msg), 0);
-    memset(Msg, 0, sizeof(Msg));
-    memset(name, 0, sizeof(name));
+    // std::cout << "보내드려요~^^ name: " << name << std::endl;
+    
+    // // 확인용
+    // recv(hSock, name, NAME_SIZE+BUF_SIZE-1, 0);
+    // std::cout << "잘 받았어요^^ name: " << name;
+
+    // 채팅 선택
+    // char chat[BUF_SIZE];
+    // std::string chat;
+    std::cout << "1. 1:1 채팅 시작하기\n2. 여러명과 채팅 시작하기\n3. 친구 찾기/추가" << std::endl;
+    std::cin >> chat;
+    if(chat == "3")
+    {
+        // getline(std::cin, chat);
+        chat[strlen(chat)] = 0;
+        send(hSock, chat, strlen(chat), 0);
+        std::cout << "야" << std::endl;
+        std::cout << "chat: " << chat << std::endl;
+        std::cout << "chat[0]: " << chat[0] << std::endl;
+        std::cout << "어우 시발 왜 안ㅇ나올까? " << std::endl;
+        std::cin >> chat;
+    }
+    else
+    {
+        chat[strlen(chat)] = 0;
+        send(hSock, chat, strlen(chat), 0);
+    }
+
+    // send(hSock, chat.c_str(), strlen(chat.c_str()), 0);
+    
+    // // 입장 메시지 보내기
+    // system("cls");
+    // char Msg[NAME_SIZE+BUF_SIZE];
+    // sprintf(Msg, "[%s] 님이 입장~~~!하셨습니다~~!\n", name);
+    // Msg[strlen(Msg)] = 0;
+    // std::cout << Msg;
+    // send(hSock, Msg, strlen(Msg), 0);
+
+    // if(!strncmp(chat, "1", 1) || !strncmp(chat, "2", 1))
+    // {
+    //     // 송신 및 수신을 담당할 쓰레드 생성
+    //     hSndThread = (HANDLE)_beginthreadex(NULL,0,SendMsg, (void*)&hSock, 0, NULL);
+    //     hRcvThread = (HANDLE)_beginthreadex(NULL,0,RecvMsg, (void*)&hSock, 0, NULL);
+    // }
+    // else if(!strncmp(chat, "3", 1))
+    // {
+    //     std::cout << "3으로 들어갔남?";
+    // }
 
     // 송신 및 수신을 담당할 쓰레드 생성
     hSndThread = (HANDLE)_beginthreadex(NULL,0,SendMsg, (void*)&hSock, 0, NULL);
     hRcvThread = (HANDLE)_beginthreadex(NULL,0,RecvMsg, (void*)&hSock, 0, NULL);
 
+    // 위에 생성되는 쓰레드 모두 무한 루프
+    // 위 두개의 쓰레드가 종료되면, 프로그램이 종료
     // 쓰레드 종료 대기
     WaitForSingleObject(hSndThread, INFINITE);
     WaitForSingleObject(hRcvThread, INFINITE);
@@ -108,7 +131,7 @@ unsigned WINAPI SendMsg(void *arg)
 {
     SOCKET hSock = *((SOCKET*)arg);
     char nameMsg[NAME_SIZE+BUF_SIZE];
-
+    std::cout<< "시팔 여기 왜 가냐고   " << chat << std::endl;
     while(1)
     {
         // 표준 입력에서 메시지를 읽어들임
@@ -119,7 +142,7 @@ unsigned WINAPI SendMsg(void *arg)
         if(!strcmp(msg,"q\n")||!strcmp(msg,"Q\n"))
         {
             // 메시지를 서버로 전송
-            sprintf(nameMsg, "%s 님이 접속을 종료하셨습니다.\n", name);
+            sprintf(nameMsg, "[%s] 님이 접속을 종료하셨습니다.\n", name);
             fputs(nameMsg, stdout);
             send(hSock, nameMsg, strlen(nameMsg), 0);   // 서버로 메시지의 길이만큼 메시지 전송
             memset(nameMsg, 0, sizeof(nameMsg));
@@ -130,7 +153,7 @@ unsigned WINAPI SendMsg(void *arg)
         else
         {
             // 메시지를 서버로 전송
-            sprintf(nameMsg, "%s %s", name, msg);
+            sprintf(nameMsg, "[%s] %s", name, msg);
             send(hSock, nameMsg, strlen(nameMsg), 0);   // 서버로 메시지의 길이만큼 메시지 전송
             memset(nameMsg, 0, sizeof(nameMsg));            
         }
@@ -148,7 +171,6 @@ unsigned WINAPI RecvMsg(void *arg)
     {
         // 서버로부터 메시지 수신
         strLen = recv(hSock, nameMsg, NAME_SIZE+BUF_SIZE-1, 0);
-
         // 수신된 메시지 출력
         if(strLen==-1)
         {
@@ -166,8 +188,3 @@ void ErrorHandling(char *msg)
     fputc('\n', stderr);
     exit(1);
 }
-
-// void textcolor(int colorNum)
-// {
-//     SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), colorNum);
-// }
