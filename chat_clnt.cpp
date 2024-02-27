@@ -3,6 +3,7 @@
 #include <string.h>
 #include <windows.h>
 #include <process.h>
+#include <vector>
 
 #define BUF_SIZE 1025        // 메시지 버퍼 크기
 #define NAME_SIZE 20        // 클라이언트 이름의 최대 크기
@@ -13,7 +14,8 @@ void ErrorHandling(char *msg);
 
 char name[NAME_SIZE]="[DEFAULT]";   // 대화명 저장 정적 배열
 char msg[BUF_SIZE];                 // 보낼 메시지를 저장할 정적 배열
-char chat[BUF_SIZE];
+
+std::vector<std::string> friendList;
 
 int main(int argc, char *argv[])
 {
@@ -48,8 +50,9 @@ int main(int argc, char *argv[])
 
 
     // 닉네임 입력
+    system("cls");
     std::cout<< "============================================" << std::endl;
-    std::cout << "           닉네임을 입력해주세요" << std::endl;
+    std::cout << "            닉네임을 입력해주세요" << std::endl;
     std::cout<< "============================================" << std::endl;
     std::cin >> name;
     name[strlen(name)] = 0;
@@ -62,36 +65,131 @@ int main(int argc, char *argv[])
     // std::cout << "잘 받았어요^^ name: " << name;
 
     // 채팅 선택
-    // char chat[BUF_SIZE];
-    // std::string chat;
+    system("cls");
+    char chat[BUF_SIZE];
+
+    std::cout << "반갑습니다 [" << name << "]님!" << std::endl;
+    std::cout << "===========================" << std::endl;
     std::cout << "1. 1:1 채팅 시작하기\n2. 여러명과 채팅 시작하기\n3. 친구 찾기/추가" << std::endl;
+    std::cout << "===========================" << std::endl;
     std::cin >> chat;
-    if(chat == "3")
+
+    // 여그 안에서 친구찾기/추가 하면 될듯 ㅋㅅㅋ
+    while(!strncmp(chat, "3", 1))
     {
+        send(hSock, chat, strlen(chat), 0);
+
         // getline(std::cin, chat);
         chat[strlen(chat)] = 0;
-        send(hSock, chat, strlen(chat), 0);
-        std::cout << "야" << std::endl;
-        std::cout << "chat: " << chat << std::endl;
-        std::cout << "chat[0]: " << chat[0] << std::endl;
-        std::cout << "어우 시발 왜 안ㅇ나올까? " << std::endl;
-        std::cin >> chat;
-    }
-    else
-    {
-        chat[strlen(chat)] = 0;
-        send(hSock, chat, strlen(chat), 0);
+        system("cls");
+        // std::cin >> chat;
+        char search[BUF_SIZE];
+        std::cout << "1. 접속중인 유저 전체 보기\n2. 닉네임으로 찾기\n";
+        std::cin >> search;
+
+        if(!strncmp(search, "1", 1))
+        {
+            int strLen;
+            std::string sendSearch = "/all";
+            // 아마 /all 보내줄듯?
+            send(hSock, sendSearch.c_str(), strlen(sendSearch.c_str()), 0);
+
+            // 서버한테 모든 유저 정보 담긴 메시지를 받을듯?
+            strLen = recv(hSock, msg, sizeof(msg), 0);
+
+            std::cout << "현재 접속 중인 유저: " << msg << std::endl;
+            // 접속 중인 유저 모두 보여줌
+            msg[strLen] = 0;
+            std::cin.ignore();
+            std::cin.get();
+            memset(msg, 0, sizeof(msg));
+        }
+        else if(!strncmp(search, "2", 1))
+        {
+            system("cls");
+            int strLen;
+
+            std::cout << "유저 닉네임을 입력해주세요.\n";
+            std::string sendFind = "/find";
+
+            std::string user;
+            std::cin >> user;
+
+            sendFind.append(user);
+
+            // 유저 닉네임 보냄
+            send(hSock, sendFind.c_str(), strlen(sendFind.c_str()), 0);
+
+            // 결과 받아야함
+            strLen = recv(hSock, msg, sizeof(msg), 0);
+            std::cout << "결과: " << msg << std::endl;
+
+            if (!strncmp(msg, "notf", 4))
+            {
+                std::cout << "유저가 존재하지 않습니다.\n엔터를 누르면 처음으로 돌아갑니다." << std::endl;
+                std::cin.ignore();
+                std::cin.get();
+            }
+            else if(!strncmp(msg, "find", 4))
+            {
+                // std::string answer;
+                char answer[BUF_SIZE];
+                std::cout << "[" << user << "]님을 친구 추가 하시겠습니까?(y/n)" << std::endl;
+                std::cin >> answer;
+
+                if(!strncmp(answer, "y", 1) || !strncmp(answer, "Y", 1))
+                {
+                    friendList.push_back(user);
+                    std::cout << "friendList의 값: ";
+                    for(auto i:friendList) std::cout << i;
+                    std::cin.ignore();
+                    std::cin.get();
+                }
+                else if(!strncmp(answer, "n", 1) || !strncmp(answer, "N", 1))
+                {
+                    char choice[BUF_SIZE];
+                    std::cout << "친구 추가를 취소하셨습니다.";
+                    std::cout << "1. 1:1 채팅 시작하기\n2. 여러명과 채팅 시작하기\n3. 친구 찾기/추가" << std::endl;
+                    std::cin >> choice;
+                    
+                }
+            }
+
+            std::cin.ignore();
+            std::cin.get();
+        }
+        // recv();
+        // strLen = recv(hSock, nameMsg, NAME_SIZE+BUF_SIZE-1, 0);
+        // 현재 접속중인 소켓 모두 recv 받기
+        // 
     }
 
-    // send(hSock, chat.c_str(), strlen(chat.c_str()), 0);
-    
-    // // 입장 메시지 보내기
+    std::cout << "1chat: " << chat << std::endl;
+
+    chat[strlen(chat)] = 0;
+    send(hSock, chat, strlen(chat), 0);
+
+    // 입장 메시지 보내기
     // system("cls");
     // char Msg[NAME_SIZE+BUF_SIZE];
     // sprintf(Msg, "[%s] 님이 입장~~~!하셨습니다~~!\n", name);
     // Msg[strlen(Msg)] = 0;
-    // std::cout << Msg;
+    // // std::cout << Msg;
     // send(hSock, Msg, strlen(Msg), 0);
+
+    // 송신 및 수신을 담당할 쓰레드 생성
+    hSndThread = (HANDLE)_beginthreadex(NULL,0,SendMsg, (void*)&hSock, 0, NULL);
+    hRcvThread = (HANDLE)_beginthreadex(NULL,0,RecvMsg, (void*)&hSock, 0, NULL);
+
+    // 위에 생성되는 쓰레드 모두 무한 루프
+    // 위 두개의 쓰레드가 종료되면, 프로그램이 종료
+    // 쓰레드 종료 대기
+    WaitForSingleObject(hSndThread, INFINITE);
+    WaitForSingleObject(hRcvThread, INFINITE);
+
+
+
+    // send(hSock, chat.c_str(), strlen(chat.c_str()), 0);
 
     // if(!strncmp(chat, "1", 1) || !strncmp(chat, "2", 1))
     // {
@@ -103,16 +201,6 @@ int main(int argc, char *argv[])
     // {
     //     std::cout << "3으로 들어갔남?";
     // }
-
-    // 송신 및 수신을 담당할 쓰레드 생성
-    hSndThread = (HANDLE)_beginthreadex(NULL,0,SendMsg, (void*)&hSock, 0, NULL);
-    hRcvThread = (HANDLE)_beginthreadex(NULL,0,RecvMsg, (void*)&hSock, 0, NULL);
-
-    // 위에 생성되는 쓰레드 모두 무한 루프
-    // 위 두개의 쓰레드가 종료되면, 프로그램이 종료
-    // 쓰레드 종료 대기
-    WaitForSingleObject(hSndThread, INFINITE);
-    WaitForSingleObject(hRcvThread, INFINITE);
 
     // // 소켓 종료
     // if(closesocket(hSock) == 0)
@@ -131,7 +219,7 @@ unsigned WINAPI SendMsg(void *arg)
 {
     SOCKET hSock = *((SOCKET*)arg);
     char nameMsg[NAME_SIZE+BUF_SIZE];
-    std::cout<< "시팔 여기 왜 가냐고   " << chat << std::endl;
+
     while(1)
     {
         // 표준 입력에서 메시지를 읽어들임
@@ -139,7 +227,7 @@ unsigned WINAPI SendMsg(void *arg)
 
         // 'q' 입력 시 클라이언트 종료
         // 문자열이 같으면 0을 리턴
-        if(!strcmp(msg,"q\n")||!strcmp(msg,"Q\n"))
+        if(!strcmp(msg,"/q\n")||!strcmp(msg,"/Q\n"))
         {
             // 메시지를 서버로 전송
             sprintf(nameMsg, "[%s] 님이 접속을 종료하셨습니다.\n", name);
