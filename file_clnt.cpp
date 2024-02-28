@@ -281,15 +281,15 @@ unsigned WINAPI SendMsg(void *arg)
 {
     SOCKET hSock = *((SOCKET*)arg);
     char nameMsg[NAME_SIZE+BUF_SIZE];
+    // memset(nameMsg, 0, strlen(nameMsg));
 
-    // 입장 메시지 보내기
-    system("cls");
-    char Msg[NAME_SIZE+BUF_SIZE];
-    sprintf(Msg, "[%s] 님이 입장~~~!하셨습니다~~!\n", name);
-    Msg[strlen(Msg)] = 0;
-    // std::cout << Msg;
-    send(hSock, Msg, strlen(Msg), 0);
-
+    // // 입장 메시지 보내기
+    // system("cls");
+    // char Msg[NAME_SIZE+BUF_SIZE];
+    // sprintf(Msg, "[%s] 님이 입장~~~!하셨습니다~~!\n", name);
+    // Msg[strlen(Msg)] = 0;
+    // // std::cout << Msg;
+    // send(hSock, Msg, strlen(Msg), 0);
 
     while(1)
     {
@@ -308,6 +308,10 @@ unsigned WINAPI SendMsg(void *arg)
 
             closesocket(hSock);
             exit(0);
+        }
+        else if(!strncmp(msg, "/f" , 2) || !strncmp(msg, "/F", 2))
+        {
+            send(hSock, msg, strlen(msg), 0);
         }
         else
         {
@@ -359,7 +363,8 @@ unsigned WINAPI RecvMsg(void *arg)
             std::cout << log[i] << std::endl;
         }
         std::cout<< "============================================" << std::endl;
-        std::cout << "                 종료: /q 또는 /Q" << std::endl;
+        std::cout << "             종료: /q 또는 /Q" << std::endl;
+        std::cout << " 파일전송: /f + 파일이름 또는 /F + 파일이름" << std::endl;
         std::cout<< "============================================" << std::endl;
 
         // if(strLen==-1)

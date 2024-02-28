@@ -100,12 +100,14 @@ int main(int argc, char *argv[])            // argc, argv 사용해 프로그램 실행시
 
         // 썅놈들아 닉네임 좀 받어라
         hJoin = (HANDLE)_beginthreadex(NULL, 0, Join, (void*)&hClntSock, 0, NULL);
+        // WaitForSingleObject(hJoin, INFINITE);
+
         CloseHandle(hJoin);
         
-        // 채팅 선택
-        hChat = (HANDLE)_beginthreadex(NULL, 0, chat, (void*)&hClntSock, 0, NULL);
-        // WaitForSingleObject(hChat, INFINITE);
-        CloseHandle(hJoin);
+        // // 채팅 선택
+        // hChat = (HANDLE)_beginthreadex(NULL, 0, chat, (void*)&hClntSock, 0, NULL);
+        // // WaitForSingleObject(hChat, INFINITE);
+        // CloseHandle(hJoin);
     }
 
     closesocket(hServSock);
@@ -117,24 +119,60 @@ int main(int argc, char *argv[])            // argc, argv 사용해 프로그램 실행시
 unsigned WINAPI Join(void* arg)
 {
     SOCKET hClntSock = *((SOCKET*)arg);
+    HANDLE hJoin, hChat;
 
     // 닉네임
     int strLen = 0;
     char name[BUF_SIZE];
+    std::string userDupl = "dupl";
+    std::string userNotDupl = "success";
+
     strLen = recv(hClntSock, name, sizeof(name), 0);
     name[strLen] = 0;
-    std::cout << "닉네임 [" << name << "]님 접속하셨습니다." << std::endl;
 
-    // 닉네임 담기
-    WaitForSingleObject(hMutex, INFINITE);
+    bool dupl = false;
+    // 중복검사
+    for(auto i: addSocket)
+    {
+        if(i.second == name)
+        {
+            std::cout << "중복 걸렸넹 ㅋ" << std::endl;
+            dupl = true;
+            break;
+        }
+    }
+    
+    
+    if(dupl)
+    {
+        send(hClntSock, userDupl.c_str(), strlen(userDupl.c_str()), 0);
 
-    addSocket.insert({hClntSock, name});     // map에 디스크립터와 소켓 저장?
+        hJoin = (HANDLE)_beginthreadex(NULL, 0, Join, (void*)&hClntSock, 0, NULL);
+        Sleep(100);
+    }
+    else
+    {
+        std::cout << "닉네임 [" << name << "]님 접속하셨습니다." << std::endl;
 
-    ReleaseMutex(hMutex);
+        // 닉네임 담기
+        WaitForSingleObject(hMutex, INFINITE);
 
-    std::cout << "현재 접속 중인 유저 : ";
-    for(auto user: addSocket) std::cout << "[" << user.second << "]님 ";
-    std::cout << std::endl;
+        addSocket.insert({hClntSock, name});     // map에 디스크립터와 소켓 저장?
+
+        ReleaseMutex(hMutex);
+
+        std::cout << "현재 접속 중인 유저 : ";
+        for(auto user: addSocket) std::cout << "[" << user.second << "]님 ";
+        std::cout << std::endl;
+
+        send(hClntSock, userNotDupl.c_str(), strlen(userNotDupl.c_str()), 0);
+
+        // 채팅 선택
+        hChat = (HANDLE)_beginthreadex(NULL, 0, chat, (void*)&hClntSock, 0, NULL);
+        Sleep(100);
+        // WaitForSingleObject(hChat, INFINITE);
+        CloseHandle(hJoin);
+    }
 
     // send(hClntSock, name, strLen, 0);
     memset(name, 0, sizeof(name));
@@ -161,6 +199,21 @@ unsigned WINAPI chat(void *arg)
     if(!strncmp(chatChoice, "1", 1))
     {
         // std::cout << "1로 들어감" << std::endl;
+        // if(singleChat.size() < 2)
+        // {
+        //     std::cout << "여기감?";
+        //     singleChat.push_back(hClntSock);
+        //     hThread = (HANDLE)_beginthreadex(NULL, 0, SingleClnt, (void*)&hClntSock, 0, NULL);
+        // }
+        // else
+        // {
+        //     std::string reStart = "restart";
+        //     send(hClntSock, reStart.c_str(), strlen(reStart.c_str()), 0);
+        //     hThread = (HANDLE)_beginthreadex(NULL, 0, chat, (void*)&hClntSock, 0, NULL);
+        //     // Sleep(100);
+        //     WaitForSingleObject(hThread, INFINITE);
+        // }
+
         singleChat.push_back(hClntSock);
         hThread = (HANDLE)_beginthreadex(NULL, 0, SingleClnt, (void*)&hClntSock, 0, NULL);
     }
@@ -177,14 +230,17 @@ unsigned WINAPI chat(void *arg)
 
     ReleaseMutex(hMutex);
 
-    WaitForSingleObject(hThread, INFINITE);
 
     // 아니 이거 없으면 왜 서버 다운되는지 몰으겠지만 일단 넣었음 걍 sleep같이 쓰레드 잡아주는 건가
     // std::cout << "singleChat 사이즈: " << singleChat.size() << std::endl;
     // std::cout << "multiChat 사이즈: " << multiChat.size() << std::endl;
 
     // sleep 걸어서 잡아뒀다... 이거 꺼지기 전에 저 쓰레드 키고 이거 꺼지게 둠
-    // Sleep(100);
+    // Sleep(1000);
+
+    // 근데 이걸로도 해결띠
+    WaitForSingleObject(hThread, INFINITE);
+
     std::cout << "꺼졌냐?" << std::endl;
     // std::cout << "singleChat: ";
     // for(auto i:singleChat) std::cout << i << " ";
@@ -217,10 +273,19 @@ unsigned WINAPI SingleClnt(void *arg)
         else
             break;
     }
-    singleChat.erase(singleChat.begin() + count);
+    if(count%2 == 0)
+    {
+        singleChat.erase(singleChat.begin() + (count+1));
+        singleChat.erase(singleChat.begin() + count);
+    }
+    else
+    {
+        singleChat.erase(singleChat.begin() + count);
+        singleChat.erase(singleChat.begin() + (count-1));
+    }
 
     // 모든 소켓에서 삭제
-    addSocket.erase(hClntSock);
+    // addSocket.erase(hClntSock);
 
     // std::cout << "addSocket 삭제 후: ";
     // for(auto i:addSocket) std::cout << i.first << " " << i.second << std::endl;
@@ -233,22 +298,32 @@ unsigned WINAPI SingleClnt(void *arg)
 
 void SendMsg(SOCKET hClntSock, char *msg, int len)
 {
-    std::cout << "메시지 보내눈듕~^ㅁ^" << std::endl;
+    std::cout << "1:1 채팅방에서 메시지 보내눈듕~^ㅁ^" << std::endl;
     WaitForSingleObject(hMutex, INFINITE);
 
     // clntCnt 배열에 있는 모든 소켓에게 메시지 전달
     for(int i = 0; i < singleChat.size(); i++)
     {
-        if (hClntSock != singleChat[i])
+        if(i%2 == 0)
         {
-            send(singleChat[i], msg, len, 0);        // 메시지의 길이를 구하여 전송
-            // msg[len] = 0;
+            if (hClntSock == singleChat[i])
+            {
+                send(singleChat[i+1], msg, len, 0);
+            }
+        }
+        else
+        {
+            if (hClntSock == singleChat[i])
+            {
+                send(singleChat[i-1], msg, len, 0);
+            }
         }
     }
+
     ReleaseMutex(hMutex);
 
-    msg[strlen(msg)] = 0;
-    std::cout << "1:1 채팅방의 message: " << msg << std::endl;
+    // msg[strlen(msg)] = 0;
+    // std::cout << "1:1 채팅방의 message: " << msg << std::endl;
 
     memset(msg, 0, sizeof(msg));
 }
@@ -272,7 +347,7 @@ unsigned WINAPI multiClnt(void *arg)
 
     WaitForSingleObject(hMutex, INFINITE);
 
-    addSocket.erase(hClntSock);
+    // addSocket.erase(hClntSock);
 
     int count = 0;
     for(auto i:multiChat)
@@ -293,7 +368,7 @@ unsigned WINAPI multiClnt(void *arg)
 // 이 함수에 연결된 모든 클라이언트에게 메시지 보내기
 void multiSendMsg(SOCKET hClntSock, char *msg, int len)
 {
-    std::cout << "메시지 보내눈듕~^ㅁ^" << std::endl;
+    std::cout << "1:N 채팅방에서 메시지 보내눈듕~^ㅁ^" << std::endl;
     
     WaitForSingleObject(hMutex, INFINITE);
     // std::cout << "multiChat size: " << multiChat.size() << std::endl;
@@ -304,10 +379,10 @@ void multiSendMsg(SOCKET hClntSock, char *msg, int len)
 
     for(int i = 0; i < multiChat.size(); i++)
     {
-        if (hClntSock != multiChat[i])
-        {
+        // if (hClntSock != multiChat[i])
+        // {
             send(multiChat[i], msg, len, 0);        // 메시지의 길이를 구하여 전송
-        }
+        // }
     }
     ReleaseMutex(hMutex);
 
@@ -320,6 +395,7 @@ unsigned WINAPI FriendList(void *arg)
     SOCKET clntSocket = *((SOCKET*)arg);
     int strLen;
     char friendMsg[BUF_SIZE];
+    HANDLE hChat;
 
     // 먼저 recv를 받고? (전체 유저인지, 친구 한명만 정보인지)
     strLen = recv(clntSocket, friendMsg, sizeof(friendMsg), 0);
@@ -333,11 +409,27 @@ unsigned WINAPI FriendList(void *arg)
         std::string userList;
 
         for(auto user: addSocket)
-            userList.append("[" + user.second + "]님 ");
+        {
+            if(user.first != clntSocket)
+                userList.append("[" + user.second + "]님 ");
+        }
 
         std::cout << "userList: " << userList;
 
+        // 결과 전송
         send(clntSocket, userList.c_str(), strlen(userList.c_str()), 0);
+
+        memset(friendMsg, 0, sizeof(friendMsg));
+        // 만약 대답을 들으면 쓰레드 다시 타보셈
+        strLen = recv(clntSocket, friendMsg, sizeof(friendMsg), 0);
+
+        if(!strncmp(friendMsg, "/re", 3))
+        {
+            hChat = (HANDLE)_beginthreadex(NULL, 0, chat, (void*)&clntSocket, 0, NULL);
+            // 잠시 교통 정리가 있으실게요^^;;
+            Sleep(100);
+            CloseHandle(hChat);
+        }
     }
     else if(!strncmp(friendMsg, "/find", 5))
     {
@@ -371,6 +463,16 @@ unsigned WINAPI FriendList(void *arg)
 
         // 결과 보내기
         send(clntSocket, result.c_str(), strlen(result.c_str()), 0);
+
+        memset(friendMsg, 0, sizeof(friendMsg));
+        strLen = recv(clntSocket, friendMsg, sizeof(friendMsg), 0);
+
+        if(!strncmp(friendMsg, "/re", 3))
+        {
+            hChat = (HANDLE)_beginthreadex(NULL, 0, chat, (void*)&clntSocket, 0, NULL);
+            Sleep(100);
+            CloseHandle(hChat);
+        }
     }
 }
 
